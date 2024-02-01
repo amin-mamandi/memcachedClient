@@ -60,6 +60,7 @@ extern pthread_mutex_t stats_lock;
 extern struct memcached_stats global_stats;
 double findQuantile(struct stat* stat, double quantile);
 void printGlobalStats();
+void printCostumStats();
 void checkExit(struct config* config);
 void addSample(struct stat* stat, float sample);
 double getAvg(struct stat* stat);

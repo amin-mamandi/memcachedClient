@@ -7,7 +7,8 @@
 #include <malloc.h>
 #include <math.h> 
 
-#define MAX_KEY_SIZE 250
+// AMIN 250
+#define MAX_KEY_SIZE 40
 #define CDF_VALUES 10000
 //#define ALPHA 0.915
 
@@ -24,7 +25,7 @@ struct int_dist {
 struct dep_entry {
   double cdf;
   int size;
-  char key[251];
+  char key[MAX_KEY_SIZE];
 };
 
 struct dep_dist {

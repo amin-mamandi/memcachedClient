@@ -94,8 +94,8 @@ char* nslookup(char* hostname){
     struct in_addr * address = (struct in_addr * )host_info->h_addr;
     ip_address = inet_ntoa(* address);
 
-    printf("host: %s\n", host_info->h_name);
-    printf("address: %s\n",ip_address);
+    // printf("host: %s\n", host_info->h_name);
+    // printf("address: %s\n",ip_address);
 
   } else {
     printf("DNS error\n");

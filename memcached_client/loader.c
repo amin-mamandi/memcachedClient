@@ -4,6 +4,9 @@
 //Protocol based on http://code.google.com/p/memcached/wiki/MemcacheBinaryProtocol
 
 #include "loader.h"
+#include "global_stats.h"
+int meanInterarrival = 0;
+int meanInterarrivalSET = 0;
 
 int verbose;
 
@@ -27,7 +30,7 @@ void printUsage() {
                 "        [-u use UDP protocl (default: TCP)]\n"
                 "        [-o arg  ouput distribution file, if input needs to be scaled]\n"
                 "        [-P arg  set the Zipfian distribution's parameter]\n"
-                "        [-r ATTEMPTED requests per second (default: max out rps)]\n"
+                "        [-r ATTEMPTED requests per second (default: max out )]\n"
                 "        [-R the keys' values are random strings instead of a sequence of 'a']\n"
                 "        [-s server configuration file]\n"
                 "        [-S dataset scaling factor]\n"
@@ -46,7 +49,7 @@ struct config* parseArgs(int argc, char** argv) {
 
   int ncpus = sysconf(_SC_NPROCESSORS_ONLN);
   config->n_cpus = ncpus;
-  config->protocol_mode = UDP_MODE;
+  config->protocol_mode = TCP_MODE;
   config->n_workers = 1;
   config->n_servers = 1;
   config->scaling_factor = 0;
@@ -55,7 +58,7 @@ struct config* parseArgs(int argc, char** argv) {
   config->stats_time  = 1;
   config->n_connections_total = 1;
   config->naggles = 0;
-  config->fixed_size = -1;
+  config->fixed_size = 500;
   config->get_frac = 0.8;
   config->n_keys = 1000;
   config->multiget_size = -1;
@@ -99,7 +102,7 @@ struct config* parseArgs(int argc, char** argv) {
         break;
 
       case 'd':
-        printf("Using size distribution file %s\n", optarg);
+        // printf("Using size distribution file %s\n", optarg);
         config->value_size_dist = loadDistributionFile(optarg);
         break;
 
@@ -201,7 +204,7 @@ struct config* parseArgs(int argc, char** argv) {
 
       case 'T':
         config->stats_time = atoi(optarg); 
-        printf("stats_time = %d\n", config->stats_time);    
+        // printf("stats_time = %d\n", config->stats_time);    
         break;
 
       case 'w':
@@ -257,23 +260,23 @@ void loadServerFile(struct config* config){
 //Prints the configuration
 void printConfiguration(struct config* config) {
 
-  printf("Configuration:\n");
-  printf("\n");
-  printf("nProcessors on system: %d\n", config->n_cpus);
-  printf("nWorkers: %d\n", config->n_workers);
-  printf("runtime: %d\n", config->run_time);
+  // printf("Configuration:\n");
+  // printf("\n");
+  // printf("nProcessors on system: %d\n", config->n_cpus);
+  // printf("nWorkers: %d\n", config->n_workers);
+  // printf("runtime: %d\n", config->run_time);
 
 //  printf("Connecterions per worker: %d\n",  config->n_connections_per_worker);
   if(config->fixed_size > 0){
-    printf("Fixed value size: %d\n", config->fixed_size);
+    // printf("Fixed value size: %d\n", config->fixed_size);
   }
-  printf("Get fraction: %f\n", config->get_frac);
+  // printf("Get fraction: %f\n", config->get_frac);
   if(config->naggles){
-    printf("Naggle's algorithm: True\n");
+    // printf("Naggle's algorithm: True\n");
   } else {
-    printf("Naggle's algorithm: False\n");
+    // printf("Naggle's algorithm: False\n");
   }
-  printf("\n\n");
+  // printf("\n\n");
 
 }//End printConfiguration()
 
@@ -305,11 +308,11 @@ void setupLoad(struct config* config) {
   
 
   if(config->value_size_dist == NULL){
-    config->value_size_dist = createUniformDistribution(1, 1024); 
+    config->value_size_dist = createUniformDistribution(1, 32); 
   }
   if(config->key_pop_dist == NULL){
     config->key_pop_dist = createUniformDistribution(0, config->n_keys -1);
-    printf("created uniform distribution %d\n", config->n_keys);
+    // printf("created uniform distribution %d\n", config->n_keys);
   } else {
     config->n_keys = CDF_VALUES;
   }
@@ -319,17 +322,27 @@ void setupLoad(struct config* config) {
     config->multiget_dist = createUniformDistribution(2, 10);
   }
 
-  printf("rps %d cpus %d\n", config->rps, config->n_workers);
-  if (config->rps == -1 || config->rps == 0)
+  // printf("rps %d cpus %d\n", config->rps, config->n_workers);
+  if (config->rps == -1 || config->rps == 0){
+      meanInterarrivalSET = 1;
+      // printf("rps has not been set and its values is: %d\n", config->rps);
       return;
-
-  int meanInterarrival = 1.0/(((float)config->rps)/(float)config->n_workers)*1e6;
-  printf("meanInterarrival %d\n", meanInterarrival);
-  if(config->arrival_distribution_type == ARRIVAL_CONSTANT) {
-    config->interarrival_dist = createConstantDistribution(meanInterarrival);
-  } else {
-    config->interarrival_dist = createExponentialDistribution(meanInterarrival);
   }
+
+  printf("hereeee \n");
+  meanInterarrival = 1.0/(((float)config->rps)/(float)config->n_workers)*1e6;
+  printf("hereeee2 \n");
+  if(config->arrival_distribution_type == ARRIVAL_CONSTANT) {
+    printf("Using constant interarrival time of %d\n", meanInterarrival);
+    printf("hereeee3 \n");
+    config->interarrival_dist = createConstantDistribution(meanInterarrival);
+    meanInterarrivalSET = 1;
+  } else {
+    config->interarrival_dist = createConstantDistribution(meanInterarrival);
+      meanInterarrivalSET = 1;
+        printf("hereeee5 \n");
+  }
+    printf("hereeee 4 \n");
 
 }//End setupLoad()
 
@@ -351,8 +364,7 @@ void cleanUp(struct config* config) {
 int main(int argc, char** argv){
   
   struct config* config = parseArgs(argc, argv);
-  printConfiguration(config);
-
+  // printConfiguration(config);
   setupLoad(config);
   createWorkers(config);
   statsLoop(config);

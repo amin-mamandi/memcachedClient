@@ -11,6 +11,7 @@
 #include "request.h"
 #include "response.h"
 #include "generate.h"
+#include "stats.h"
 
 #include "mt19937p.h"
 

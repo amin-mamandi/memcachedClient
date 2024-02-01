@@ -1,10 +1,17 @@
 
 #include "worker.h"
+#include "global_stats.h"
 
+// AMIN
+double global_99th_latency_previous = 0.0;
+int IncreadedMeanInterarrival = 0;
+int decreasedMeanInterarrival = 0;
+
+int threshold = 10000;
 void* workerFunction(void* arg) {
 
   struct worker* worker = arg;
-  printf("Creating worker on tid %u\n", (unsigned int)pthread_self());
+  // printf("Creating worker on tid %u\n", (unsigned int)pthread_self());
 
 
 /*  int s;
@@ -55,7 +62,7 @@ void workerLoop(struct worker* worker) {
   }//End for i
 
   gettimeofday(&(worker->last_write_time), NULL);
-  printf("starting receive base loop\n");
+  // printf("starting receive base loop\n");
   int error = event_base_loop(worker->event_base, 0);
 
   if(error == -1) {
@@ -64,7 +71,7 @@ void workerLoop(struct worker* worker) {
     printf("No events registered with libevent\n");
   }
 
-  printf("base loop done\n");
+  // printf("base loop done\n");
 
 }//End workerLoop()
 
@@ -101,6 +108,7 @@ struct request* getNextRequest(struct worker* worker) {
 }//End getNextRequest()
 
 void sendCallback(int fd, short eventType, void* args) {
+  
   struct worker* worker = args;
   struct timeval timestamp, timediff, timeadd;
   gettimeofday(&timestamp, NULL);
@@ -114,17 +122,16 @@ void sendCallback(int fd, short eventType, void* args) {
   if(interarrival_dist != NULL){
     if(worker->interarrival_time <= 0){
         interarrival_time = getIntQuantile(interarrival_dist); //In microseconds
-        //   printf("new interarrival_time %d\n", interarrival_time);
         worker->interarrival_time = interarrival_time;
     } else {
         interarrival_time = worker->interarrival_time; 
     }
-      if( interarrival_time/1.0e6 > diff){
-          return;
-      }
+    if( interarrival_time/1.0e6 > diff){
+      // printf("Not time to send yet\n");
+        return;
+    }
   }
   worker->interarrival_time = -1;
-
   timeadd.tv_sec = 0; timeadd.tv_usec = interarrival_time; 
   timeradd(&(worker->last_write_time), &timeadd, &(worker->last_write_time));
 
@@ -142,7 +149,7 @@ void sendCallback(int fd, short eventType, void* args) {
     }
   }
   if(request->header.opcode == OP_SET){
-//    printf("Generated SET request of size %d\n", request->value_size);
+  //  printf("Generated SET request of size %d\n", request->value_size);
   }
   if( !pushRequest(worker, request) ) {
     //Queue is full, bail
@@ -151,10 +158,46 @@ void sendCallback(int fd, short eventType, void* args) {
     return;
   }
 
-  // AMIN
-  udpSendRequest(request);
-  
- 
+  // if (global_99th_latency*1000 > 1.0 && meanInterarrivalSET == 1) {
+  //   IncreadedMeanInterarrival++;
+  //   if (IncreadedMeanInterarrival == threshold) {
+  //         // printf("Increasing meanInterarrival\n");
+
+  //     meanInterarrival = meanInterarrival*1.05;
+  //     if (n_requests > 10000) {
+  //       threshold = n_requests*1.05;
+  //     }
+  //     for (int i = 0; i < worker->config->n_workers; i++) {
+  //       worker->config->workers[i]->config->interarrival_dist =  createConstantDistribution(meanInterarrival);
+  //     }
+  //     IncreadedMeanInterarrival = 0;
+  //   }
+  // }
+
+  // if (global_99th_latency*1000 < 1.0 && meanInterarrivalSET == 1 && meanInterarrival > 10) {
+  //   decreasedMeanInterarrival++;
+  //   if (decreasedMeanInterarrival == threshold) {
+  //         // printf("Decreasing meanInterarrival\n");
+
+  //     meanInterarrival = meanInterarrival*0.99;
+  //     if (n_requests > 10000) {
+  //       threshold = n_requests/1.1;
+  //     }
+  //     // printf("threshold %d\n", threshold);
+  //     // test = test * 1.1;
+  //     for (int i = 0; i < worker->config->n_workers; i++) {
+  //       worker->config->workers[i]->config->interarrival_dist =  createConstantDistribution(meanInterarrival);
+  //     }
+  //     decreasedMeanInterarrival = 0;
+  //   }
+  // }
+  // else {
+  //   meanInterarrival = meanInterarrival - 10;
+  //   for (int i = 0; i < worker->config->n_workers; i++) {
+  //     worker->config->workers[i]->config->interarrival_dist =  createConstantDistribution(meanInterarrival);
+  //   }
+  // }
+  sendRequest(request);
 }//End sendCallback()
 
 
@@ -221,7 +264,7 @@ void createWorkers(struct config* config) {
   int total_connections = 0;
   for(i = 0; i < config->n_workers; i++) {
     int num_worker_connections = config->n_connections_total/config->n_workers + (i < config->n_connections_total % config->n_workers);
-    printf("num_worker_connections %d\n", num_worker_connections);
+    // printf("num_worker_connections %d\n", num_worker_connections);
     total_connections += num_worker_connections;
     config->workers[i]->connections = malloc(sizeof(struct conn*) * num_worker_connections);
     config->workers[i]->nConnections = num_worker_connections;
@@ -238,7 +281,7 @@ void createWorkers(struct config* config) {
       printf("Error creating receive thread\n");
     }
   }
-  printf("Created %d connections total\n", total_connections);
+  // printf("Created %d connections total\n", total_connections);
 
 
 }//createWorkers()

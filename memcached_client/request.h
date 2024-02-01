@@ -38,8 +38,9 @@
 #define REP 7
 
 #define MEMCACHE_HEADER_SIZE 24
-#define MAX_KEY_LENGTH 250
-#define MAX_VALUE_LENGTH (1024*1024)
+#define MAX_KEY_LENGTH 16
+#define MAX_VALUE_LENGTH 1000
+// #define MAX_VALUE_LENGTH (512)
 
 struct request_header {
   char magic;

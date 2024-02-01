@@ -9,9 +9,15 @@
 #include <assert.h>
 #include "worker.h"
 
+// AMIN
+#include "global_stats.h"
+double global_99th_latency = 0.0;
+int n_requests = 0;
+
 pthread_mutex_t stats_lock = PTHREAD_MUTEX_INITIALIZER;
 struct timeval start_time;
 struct memcached_stats global_stats;
+
 
 void addSample(struct stat* stat, float value) {
   stat->s0 += 1.0;
@@ -108,6 +114,10 @@ void printGlobalStats(struct config* config) {
   double q90 = findQuantile(&global_stats.response_time, .90);
   double q95 = findQuantile(&global_stats.response_time, .95);
   double q99 = findQuantile(&global_stats.response_time, .99);
+  // AMIN
+  // Setting up the global 99th latency for the workers to use
+  global_99th_latency = q99;
+  n_requests = global_stats.requests;
 
   printf("%10s,%10s,%8s,%16s, %8s,%11s,%10s,%13s,%10s,%10s,%10s,%12s,%10s,%10s,%11s,%14s\n", "unix_ts", "timeDiff", "rps", "requests", "gets", "sets",  "hits", "misses", "avg_lat", "90th", "95th", "99th", "std", "min", "max", "avgGetSize");
   printf("%10ld, %10f, %9.1f,  %10d, %10d, %10d, %10d, %10d, %10f, %10f, %10f, %10f, %10f, %10f, %10f, %10f\n", 
@@ -120,6 +130,31 @@ void printGlobalStats(struct config* config) {
   } 
   printf("\n");
   //Reset stats
+  memset(&global_stats, 0, sizeof(struct memcached_stats));
+  global_stats.response_time.min = 1000000;
+  global_stats.last_time = currentTime;
+
+  checkExit(config);
+  pthread_mutex_unlock(&stats_lock);
+
+}//End printGlobalStats()
+
+void printCostumStats(struct config* config) {
+
+  pthread_mutex_lock(&stats_lock);
+  struct timeval currentTime;
+  gettimeofday(&currentTime, NULL);
+  double timeDiff = currentTime.tv_sec - global_stats.last_time.tv_sec + 1e-6*(currentTime.tv_sec - global_stats.last_time.tv_sec);
+  double rps = global_stats.requests/timeDiff;
+  // double std = getStdDev(&global_stats.response_time);
+  // double q90 = findQuantile(&global_stats.response_time, .90);
+  // double q95 = findQuantile(&global_stats.response_time, .95);
+  double q99 = findQuantile(&global_stats.response_time, .99);
+
+  // printf("%8s,%16s, %13s,%10s,%10s,%10s,%12s,%10s,%10s,%11s,%14s\n", "rps", "requests", "gets", "sets",  "hits", "misses", "avg_lat", "90th", "95th", "99th", "std", "min", "max", "avgGetSize");
+  printf("Reqs: %7d, RPS: %9f, AvgLat: %9f,  99th: %9f \n", global_stats.requests, rps, 1000*getAvg(&global_stats.response_time), 1000*q99);
+
+
   memset(&global_stats, 0, sizeof(struct memcached_stats));
   global_stats.response_time.min = 1000000;
   global_stats.last_time = currentTime;

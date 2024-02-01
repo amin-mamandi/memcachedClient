@@ -285,7 +285,7 @@ void checkError(int errorCode, char* key, char* value){
       printf("Unknown error code\n%s\n", value);
   }
 
-  printf("key: %s, value: %s\n", key, value);
+  // printf("key: %s, value: %s\n", key, value);
   exit(-1);
 
 }//End checkError()

@@ -59,9 +59,12 @@ struct key_list* generateKeys(struct config* config) {
 
     int i;
     for( i = 0; i < keyList->n_keys; i++ ){ 
-        int keySize = randomFunction() % MAX_KEY_SIZE;
+        // int keySize = randomFunction() % MAX_KEY_SIZE;
+        int keySize =  MAX_KEY_SIZE;
         while(keySize <= 1){
-            keySize = randomFunction() % MAX_KEY_SIZE;
+            // keySize = randomFunction() % MAX_KEY_SIZE;
+            keySize =  MAX_KEY_SIZE;
+            
         }
         keyList->keys[i] = randomString(keySize);
         //printf("i: %d key: %s\n", i, keyList->keys[i]);
@@ -182,7 +185,7 @@ double harmonicSum(int size, double alpha){
 }
 struct dep_dist* loadDepFile(struct config* config) { 
 
-    printf("Loading key value file...");
+    // printf("Loading key value file...");
     struct dep_dist* dist = malloc(sizeof(struct dep_dist));
 
     char lineBuffer[1024];
@@ -221,7 +224,7 @@ struct dep_dist* loadDepFile(struct config* config) {
 
 struct dep_dist* loadAndScaleDepFile(struct config* config) { 
 
-    printf("Loading key value file...");
+    // printf("Loading key value file...");
     struct dep_dist* dist = malloc(sizeof(struct dep_dist));
 
     char lineBuffer[1024];
@@ -264,7 +267,7 @@ struct dep_dist* loadAndScaleDepFile(struct config* config) {
             avg_size+=entry->size; 	
         }
         else if(config->distribution == PURE_ZIPFIAN){
-            char* cdfValue = strtok(lineBuffer, " ,\n"); // it is necessary to correctly parse sizeValue
+            // char* cdfValue = strtok(lineBuffer, " ,\n"); // it is necessary to correctly parse sizeValue
             char* sizeValue = strtok(NULL, " ,\n");
             struct dep_entry* entry = malloc(sizeof(struct dep_entry));
             double w = (1.0/pow(newLines-i, config->ALPHA))/sum2;
@@ -350,6 +353,9 @@ struct request* generateRequest(struct config* config, struct worker* worker) {
             worker->warmup_key_check++;
             key = dep_entry->key;
             valueSize = dep_entry->size;
+            // valueSize = 32;
+            // AMIN
+            // printf("AMIN::valueSize: %d, keySize: %d\n", valueSize, s/izeof(dep_entry->key));
             if(config->randomValue){
                 value = parRandomString(valueSize, worker);
             }
@@ -371,7 +377,8 @@ struct request* generateRequest(struct config* config, struct worker* worker) {
         }
         key = dep_entry->key;
         valueSize = dep_entry->size;
-        //printf("Generate key %s with valueSize %d\n", key, valueSize);
+        // valueSize = 32;
+        // printf("AMIN::Generate key %s with valueSize %d\n", key, valueSize);
         //Pick a key
     }else{
         int keyIndex = getIntQuantile(config->key_pop_dist);
@@ -464,7 +471,9 @@ struct request* generateRequest(struct config* config, struct worker* worker) {
             if(config->fixed_size > 0) {
                 valueSize = config->fixed_size;
             } else {
+                // AMIN
                 valueSize = getIntQuantile(config->value_size_dist);
+                // valueSize = 32;
                 if(valueSize == 0) {
                     printf("failboat: zero sizedd value\n");
                     exit(-1);

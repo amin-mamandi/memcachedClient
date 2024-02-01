@@ -222,7 +222,7 @@ struct request* createRequest(int requestType, struct conn* conn, struct worker*
   } 
 
   if(valueLength > MAX_VALUE_LENGTH) {
-    printf("The value is too long!\nvalue: %s\nlength: %d\n", value, valueLength);
+    // printf("The value is too long!\nvalue: %s\nlength: %d\n", value, valueLength);
   }
   request->request_type = type;
 
